@@ -1,4 +1,4 @@
-# Lark C++ IM 长连接最小复刻
+# 飞书IM api C++ 封装
 
 本目录提供基于 **长连接(WebSocket)收消息 + HTTP 发消息** 的最小 C++ 框架
 
@@ -48,7 +48,3 @@ int main() {
 }
 ```
 
-## 说明
-- WS 连接端点通过 `POST /callback/ws/endpoint` 获取。
-- 已补齐最小 **Frame(proto2)** 编解码器与合包逻辑（仅覆盖必要字段）。
-- 仅提供最小骨架，供后续扩展。
