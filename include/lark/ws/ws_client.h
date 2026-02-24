@@ -26,12 +26,13 @@ class WsClient {
   WsClient(const lark::core::Config& cfg, EventDispatcher& dispatcher);
   ~WsClient();
   void Start();
+  void Stop();
 
  private:
   Endpoint FetchEndpoint();
   void Connect(const std::string& url);
   void StartPingLoop();
-  void Stop();
+  
   void DoRead();
   void DoWrite(const std::string& payload);
 
