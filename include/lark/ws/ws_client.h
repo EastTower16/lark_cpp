@@ -32,6 +32,7 @@ class WsClient {
   Endpoint FetchEndpoint();
   void Connect(const std::string& url);
   void StartPingLoop();
+  void StopPingLoop();
   
   void DoRead();
   void DoWrite(const std::string& payload);

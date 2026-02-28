@@ -309,7 +309,7 @@ void WsClient::Connect(const std::string& url) {
     std::cerr << "WebSocket connect error: " << e.what() << std::endl;
   }
   
-  connected_ = false;
+  StopPingLoop();
 }
 
 void WsClient::DoWrite(const std::string& payload) {
@@ -329,6 +329,9 @@ void WsClient::StartPingLoop() {
   }
   ping_thread_ = std::thread([this]() {
     while (running_) {
+      if (!connected_) {
+        break;
+      }
       std::this_thread::sleep_for(std::chrono::seconds(ping_interval_sec_));
       if (!running_ || !connected_) {
         break;
@@ -343,9 +346,16 @@ void WsClient::StartPingLoop() {
   });
 }
 
+void WsClient::StopPingLoop() {
+  connected_ = false;
+  if (ping_thread_.joinable()) {
+    ping_thread_.join();
+  }
+}
+
 void WsClient::Stop() {
   running_ = false;
-  connected_ = false;
+  StopPingLoop();
   if (ws_) {
     try {
       boost::system::error_code ec;
