@@ -138,6 +138,15 @@ Endpoint WsClient::FetchEndpoint() {
 }
 
 void WsClient::Connect(const std::string& url) {
+  StopPingLoop();
+  if (ws_) {
+    try {
+      boost::system::error_code ec;
+      std::lock_guard<std::mutex> lock(write_mutex_);
+      ws_->close(boost::beast::websocket::close_code::normal, ec);
+    } catch (...) {}
+    ws_.reset();
+  }
   service_id_ = ParseQueryInt(url, "service_id");
 
   try {
@@ -214,7 +223,10 @@ void WsClient::Connect(const std::string& url) {
     while (connected_ && running_) {
       buffer_.consume(buffer_.size());
       boost::system::error_code ec;
-      ws_->read(buffer_, ec);
+      {
+        std::lock_guard<std::mutex> lock(write_mutex_);
+        ws_->read(buffer_, ec);
+      }
 
       if (ec == boost::beast::websocket::error::closed || ec == boost::asio::error::eof) {
         break;
@@ -359,6 +371,7 @@ void WsClient::Stop() {
   if (ws_) {
     try {
       boost::system::error_code ec;
+      std::lock_guard<std::mutex> lock(write_mutex_);
       ws_->close(boost::beast::websocket::close_code::normal, ec);
     } catch (...) {}
   }
