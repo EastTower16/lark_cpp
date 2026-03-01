@@ -23,6 +23,33 @@ int main() {
     if (!im.CreateMessage(receive_id, "text", R"({"text":"收到"})", receive_id_type)) {
       std::cout << "send reply failed" << std::endl;
     }
+
+    // 示例：上传普通文件并发送
+    // std::string file_key;
+    // if (im.UploadFile("stream", "/path/to/file.txt", "file.txt", &file_key)) {
+    //   im.SendFileMessage(receive_id, file_key, receive_id_type);
+    // }
+
+    // 示例：上传音频（需 duration）并发送
+    // std::string audio_key;
+    // if (im.UploadFile("opus", "/path/to/audio.opus", "audio.opus", &audio_key, 3000)) {
+    //   im.SendAudioMessage(receive_id, audio_key, receive_id_type);
+    // }
+
+    // 示例：上传视频（需 duration）并发送封面
+    // std::string video_key;
+    // if (im.UploadFile("mp4", "/path/to/video.mp4", "video.mp4", &video_key, 3000)) {
+    //   std::string image_key;
+    //   if (im.UploadImage("/path/to/cover.jpg", &image_key)) {
+    //     im.SendMediaMessage(receive_id, video_key, image_key, receive_id_type);
+    //   }
+    // }
+
+    // 示例：下载文件
+    // im.DownloadFile("file_v2_xxx", "/path/to/download.bin");
+
+    // 示例：下载图片
+    // im.DownloadImage("img_v2_xxx", "/path/to/download.jpg");
   });
 
   lark::ws::WsClient ws(cfg, dispatcher);

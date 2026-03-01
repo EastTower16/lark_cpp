@@ -2,6 +2,7 @@
 
 #include <map>
 #include <string>
+#include <vector>
 
 namespace lark::core {
 
@@ -16,6 +17,15 @@ struct BaseRequest {
   std::map<std::string, std::string> queries;
   std::map<std::string, std::string> paths;
   std::string body;
+  struct MultipartField {
+    std::string name;
+    std::string data;
+    std::string file_path;
+    std::string filename;
+    std::string content_type;
+    bool is_file = false;
+  };
+  std::vector<MultipartField> multipart;
   AccessTokenType token_type = AccessTokenType::kNone;
 };
 

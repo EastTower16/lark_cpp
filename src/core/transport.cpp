@@ -58,7 +58,8 @@ RawResponse Transport::Execute(const Config& cfg, const BaseRequest& req, const 
     headers = curl_slist_append(headers, header.c_str());
   }
 
-  if (!req.body.empty()) {
+  bool has_multipart = !req.multipart.empty();
+  if (!req.body.empty() && !has_multipart) {
     headers = curl_slist_append(headers, "Content-Type: application/json; charset=utf-8");
   }
 
@@ -66,22 +67,53 @@ RawResponse Transport::Execute(const Config& cfg, const BaseRequest& req, const 
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
   }
 
+  curl_mime* mime = nullptr;
+  if (has_multipart) {
+    mime = curl_mime_init(curl);
+    for (const auto& field : req.multipart) {
+      curl_mimepart* part = curl_mime_addpart(mime);
+      curl_mime_name(part, field.name.c_str());
+      if (field.is_file) {
+        if (!field.file_path.empty()) {
+          curl_mime_filedata(part, field.file_path.c_str());
+        } else {
+          curl_mime_data(part, field.data.c_str(), field.data.size());
+        }
+        if (!field.filename.empty()) {
+          curl_mime_filename(part, field.filename.c_str());
+        }
+        if (!field.content_type.empty()) {
+          curl_mime_type(part, field.content_type.c_str());
+        }
+      } else {
+        curl_mime_data(part, field.data.c_str(), field.data.size());
+      }
+    }
+    curl_easy_setopt(curl, CURLOPT_MIMEPOST, mime);
+  }
+
   switch (req.method) {
     case HttpMethod::kPost:
       curl_easy_setopt(curl, CURLOPT_POST, 1L);
-      curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req.body.c_str());
+      if (!has_multipart) {
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req.body.c_str());
+      }
       break;
     case HttpMethod::kPut:
       curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
-      curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req.body.c_str());
+      if (!has_multipart) {
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req.body.c_str());
+      }
       break;
     case HttpMethod::kPatch:
       curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PATCH");
-      curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req.body.c_str());
+      if (!has_multipart) {
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req.body.c_str());
+      }
       break;
     case HttpMethod::kDelete:
       curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-      if (!req.body.empty()) {
+      if (!req.body.empty() && !has_multipart) {
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, req.body.c_str());
       }
       break;
@@ -100,6 +132,9 @@ RawResponse Transport::Execute(const Config& cfg, const BaseRequest& req, const 
     resp.status_code = static_cast<int>(status);
   }
 
+  if (mime) {
+    curl_mime_free(mime);
+  }
   if (headers) {
     curl_slist_free_all(headers);
   }
