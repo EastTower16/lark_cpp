@@ -67,6 +67,37 @@ void AppendFormEnd(std::string* body) {
   body->append(kMultipartBoundary);
   body->append("--\r\n");
 }
+
+std::string ToLower(std::string value) {
+  for (auto& ch : value) {
+    if (ch >= 'A' && ch <= 'Z') {
+      ch = static_cast<char>(ch - 'A' + 'a');
+    }
+  }
+  return value;
+}
+
+std::string NormalizeFileType(const std::string& file_type, const std::string& file_name) {
+  std::string candidate = ToLower(file_type);
+  if (candidate.empty()) {
+    auto pos = file_name.find_last_of('.');
+    if (pos != std::string::npos && pos + 1 < file_name.size()) {
+      candidate = ToLower(file_name.substr(pos + 1));
+    }
+  }
+  if (candidate == "docx") {
+    candidate = "doc";
+  } else if (candidate == "xlsx") {
+    candidate = "xls";
+  } else if (candidate == "pptx") {
+    candidate = "ppt";
+  }
+  if (candidate == "opus" || candidate == "mp4" || candidate == "pdf" || candidate == "doc" ||
+      candidate == "xls" || candidate == "ppt" || candidate == "stream") {
+    return candidate;
+  }
+  return "stream";
+}
 }  // namespace
 
 ImService::ImService(const lark::core::Config& cfg) : cfg_(cfg) {}
@@ -167,8 +198,9 @@ bool ImService::UploadFile(const std::string& file_type,
     return false;
   }
 
+  std::string normalized_type = NormalizeFileType(file_type, file_name);
   std::string multipart_body;
-  AppendFormField(&multipart_body, "file_type", file_type);
+  AppendFormField(&multipart_body, "file_type", normalized_type);
   AppendFileField(&multipart_body, "file", file_name, content_type, file_data);
   if (duration_ms > 0) {
     AppendFormField(&multipart_body, "duration", std::to_string(duration_ms));
