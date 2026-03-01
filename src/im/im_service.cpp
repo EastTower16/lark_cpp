@@ -11,6 +11,64 @@
 
 namespace lark::im::v1 {
 
+namespace {
+constexpr const char* kMultipartBoundary = "---7MA4YWxkTrZu0gW";
+
+std::string BasenameFromPath(const std::string& path) {
+  auto pos = path.find_last_of("/\\");
+  if (pos == std::string::npos || pos + 1 >= path.size()) {
+    return path;
+  }
+  return path.substr(pos + 1);
+}
+
+bool ReadFileAll(const std::string& path, std::string* data) {
+  std::ifstream in(path, std::ios::binary);
+  if (!in.is_open()) {
+    return false;
+  }
+  data->assign((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+  return true;
+}
+
+void AppendFormField(std::string* body, const std::string& name, const std::string& value) {
+  body->append("--");
+  body->append(kMultipartBoundary);
+  body->append("\r\n");
+  body->append("Content-Disposition: form-data; name=\"");
+  body->append(name);
+  body->append("\"\r\n\r\n");
+  body->append(value);
+  body->append("\r\n");
+}
+
+void AppendFileField(std::string* body,
+                     const std::string& name,
+                     const std::string& filename,
+                     const std::string& content_type,
+                     const std::string& data) {
+  body->append("--");
+  body->append(kMultipartBoundary);
+  body->append("\r\n");
+  body->append("Content-Disposition: form-data; name=\"");
+  body->append(name);
+  body->append("\"; filename=\"");
+  body->append(filename);
+  body->append("\"\r\n");
+  body->append("Content-Type: ");
+  body->append(content_type.empty() ? "application/octet-stream" : content_type);
+  body->append("\r\n\r\n");
+  body->append(data);
+  body->append("\r\n");
+}
+
+void AppendFormEnd(std::string* body) {
+  body->append("--");
+  body->append(kMultipartBoundary);
+  body->append("--\r\n");
+}
+}  // namespace
+
 ImService::ImService(const lark::core::Config& cfg) : cfg_(cfg) {}
 
 bool ImService::CreateMessage(const std::string& receive_id,
@@ -103,18 +161,22 @@ bool ImService::UploadFile(const std::string& file_type,
   req.token_type = lark::core::AccessTokenType::kTenant;
   req.headers["Content-Type"] = "multipart/form-data; boundary=---7MA4YWxkTrZu0gW";
 
-  req.multipart.push_back({"file_type", file_type, "", "", "", false});
-  if (duration_ms > 0) {
-    req.multipart.push_back({"duration", std::to_string(duration_ms), "", "", "", false});
+  std::string file_data;
+  if (!ReadFileAll(file_path, &file_data)) {
+    std::cerr << "UploadFile failed: cannot read file" << std::endl;
+    return false;
   }
-  req.multipart.push_back({"file_name", file_name, "", "", "", false});
-  lark::core::BaseRequest::MultipartField file_field;
-  file_field.name = "file";
-  file_field.file_path = file_path;
-  file_field.filename = file_name;
-  file_field.content_type = content_type;
-  file_field.is_file = true;
-  req.multipart.push_back(file_field);
+
+  std::string multipart_body;
+  AppendFormField(&multipart_body, "file_type", file_type);
+  AppendFileField(&multipart_body, "file", file_name, content_type, file_data);
+  if (duration_ms > 0) {
+    AppendFormField(&multipart_body, "duration", std::to_string(duration_ms));
+  }
+  AppendFormField(&multipart_body, "file_name", file_name);
+  AppendFormEnd(&multipart_body);
+  req.body = std::move(multipart_body);
+  req.body_size = req.body.size();
 
   lark::core::RequestOption opt;
   if (!lark::core::VerifyAndFillToken(cfg_, req, opt)) {
@@ -158,14 +220,19 @@ bool ImService::UploadImage(const std::string& image_path,
   req.uri = "/open-apis/im/v1/images";
   req.token_type = lark::core::AccessTokenType::kTenant;
   req.headers["Content-Type"] = "multipart/form-data; boundary=---7MA4YWxkTrZu0gW";
-  req.multipart.push_back({"image_type", image_type, "", "", "", false});
 
-  lark::core::BaseRequest::MultipartField image_field;
-  image_field.name = "image";
-  image_field.file_path = image_path;
-  image_field.content_type = content_type;
-  image_field.is_file = true;
-  req.multipart.push_back(image_field);
+  std::string image_data;
+  if (!ReadFileAll(image_path, &image_data)) {
+    std::cerr << "UploadImage failed: cannot read image" << std::endl;
+    return false;
+  }
+
+  std::string multipart_body;
+  AppendFormField(&multipart_body, "image_type", image_type);
+  AppendFileField(&multipart_body, "image", BasenameFromPath(image_path), content_type, image_data);
+  AppendFormEnd(&multipart_body);
+  req.body = std::move(multipart_body);
+  req.body_size = req.body.size();
 
   lark::core::RequestOption opt;
   if (!lark::core::VerifyAndFillToken(cfg_, req, opt)) {

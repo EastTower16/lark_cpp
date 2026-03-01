@@ -17,6 +17,7 @@ struct BaseRequest {
   std::map<std::string, std::string> queries;
   std::map<std::string, std::string> paths;
   std::string body;
+  size_t body_size = 0;
   struct MultipartField {
     std::string name;
     std::string data;
