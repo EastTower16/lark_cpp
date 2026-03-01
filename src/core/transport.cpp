@@ -59,7 +59,7 @@ RawResponse Transport::Execute(const Config& cfg, const BaseRequest& req, const 
   }
 
   bool has_multipart = !req.multipart.empty();
-  if (!req.body.empty() && !has_multipart) {
+  if (!req.body.empty() && !has_multipart && req.headers.find("Content-Type") == req.headers.end()) {
     headers = curl_slist_append(headers, "Content-Type: application/json; charset=utf-8");
   }
 

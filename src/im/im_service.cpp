@@ -101,6 +101,7 @@ bool ImService::UploadFile(const std::string& file_type,
   req.method = lark::core::HttpMethod::kPost;
   req.uri = "/open-apis/im/v1/files";
   req.token_type = lark::core::AccessTokenType::kTenant;
+  req.headers["Content-Type"] = "multipart/form-data; boundary=---7MA4YWxkTrZu0gW";
 
   req.multipart.push_back({"file_type", file_type, "", "", "", false});
   if (duration_ms > 0) {
@@ -156,6 +157,7 @@ bool ImService::UploadImage(const std::string& image_path,
   req.method = lark::core::HttpMethod::kPost;
   req.uri = "/open-apis/im/v1/images";
   req.token_type = lark::core::AccessTokenType::kTenant;
+  req.headers["Content-Type"] = "multipart/form-data; boundary=---7MA4YWxkTrZu0gW";
   req.multipart.push_back({"image_type", image_type, "", "", "", false});
 
   lark::core::BaseRequest::MultipartField image_field;
