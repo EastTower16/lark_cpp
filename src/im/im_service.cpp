@@ -182,8 +182,8 @@ bool ImService::UploadFile(const std::string& file_type,
     std::cerr << "UploadFile failed: file_key is null" << std::endl;
     return false;
   }
-  if (file_type.empty() || file_path.empty() || file_name.empty()) {
-    std::cerr << "UploadFile failed: empty file_type/file_path/file_name" << std::endl;
+  if (file_path.empty() || file_name.empty()) {
+    std::cerr << "UploadFile failed: empty file_path/file_name" << std::endl;
     return false;
   }
   lark::core::BaseRequest req;
